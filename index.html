@@ -1,0 +1,102 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BTC Staking Platform</title>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+    .container { max-width: 500px; margin: 50px auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    h1 { text-align: center; color: #333; }
+    input, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; }
+    button { background-color: #28a745; color: white; cursor: pointer; }
+    button:hover { background-color: #218838; }
+    .info { margin: 10px 0; padding: 10px; background: #e9ecef; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>BTC Staking Platform</h1>
+    <div>
+      <h3>Deposit BTC</h3>
+      <input type="text" id="wallet" placeholder="Your BTC Wallet Address">
+      <input type="number" id="amount" placeholder="Amount in BTC" step="0.0001">
+      <input type="number" id="stakingDays" placeholder="Staking Days (20-90)" min="20" max="90">
+      <button onclick="makeDeposit()">Deposit Now</button>
+      <div class="info" id="depositMessage"></div>
+    </div>
+    <div>
+      <h3>Check Rewards</h3>
+      <input type="text" id="checkWallet" placeholder="Enter Your Wallet Address">
+      <button onclick="checkRewards()">Check</button>
+      <div class="info" id="rewardInfo"></div>
+    </div>
+    <div>
+      <h3>Request Withdrawal</h3>
+      <input type="text" id="withdrawWallet" placeholder="Your BTC Wallet Address">
+      <button onclick="requestWithdrawal()">Request Withdrawal</button>
+      <div class="info" id="withdrawInfo"></div>
+    </div>
+  </div>  <script>
+    const backendUrl = "https://btc-staking-backend.onrender.com" // Replace with your backend deployment URL
+
+    async function makeDeposit() {
+      const wallet = document.getElementById("wallet").value;
+      const amount = parseFloat(document.getElementById("amount").value);
+      const stakingDays = parseInt(document.getElementById("stakingDays").value);
+
+      try {
+        const res = await fetch(`${backendUrl}/deposit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ wallet, amount, stakingDays })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          // Hide address and only show a deposit button
+          const encodedAddress = encodeURIComponent(data.forwardTo);
+          const encodedAmount = encodeURIComponent(amount);
+          const paymentUrl = `bitcoin:${encodedAddress}?amount=${encodedAmount}`;
+          document.getElementById("depositMessage").innerHTML = `<a href="${paymentUrl}" target="_blank"><button style='background-color:#007bff;color:white;padding:10px 15px;border:none;border-radius:5px;'>Open Wallet to Deposit</button></a>`;
+        } else {
+          document.getElementById("depositMessage").innerText = `Error: ${data.error}`;
+        }
+      } catch (err) {
+        document.getElementById("depositMessage").innerText = "Server error";
+      }
+    }
+
+    async function checkRewards() {
+      const wallet = document.getElementById("checkWallet").value;
+      try {
+        const res = await fetch(`${backendUrl}/rewards/${wallet}`);
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById("rewardInfo").innerText = `Deposited: ${data.amount} BTC, Days: ${data.days}, Rewards: ${data.rewards.toFixed(4)} BTC`;
+        } else {
+          document.getElementById("rewardInfo").innerText = `Error: ${data.error}`;
+        }
+      } catch (err) {
+        document.getElementById("rewardInfo").innerText = "Server error";
+      }
+    }
+
+    async function requestWithdrawal() {
+      const wallet = document.getElementById("withdrawWallet").value;
+      try {
+        const res = await fetch(`${backendUrl}/withdraw`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ wallet })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById("withdrawInfo").innerText = data.message;
+        } else {
+          document.getElementById("withdrawInfo").innerText = `Error: ${data.error}`;
+        }
+      } catch (err) {
+        document.getElementById("withdrawInfo").innerText = "Server error";
+      }
+    }
+  </script></body>
+</html>
